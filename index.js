@@ -1,5 +1,6 @@
 
 const { Client, Routes, GatewayIntentBits } = require("discord.js");
+const http = require('http');
 
 // Load environment variables
 require('dotenv').config();
@@ -269,6 +270,29 @@ const token = process.env.DISCORD_BOT_TOKEN;
     );
 
     console.log("🎉 Bot is now online and ready!");
+
+    // Start HTTP health check server for deployment platforms
+    const PORT = process.env.PORT || 3000;
+    const server = http.createServer((req, res) => {
+      if (req.url === '/health' || req.url === '/') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          status: 'ok',
+          bot: client.user?.tag || 'Not logged in',
+          guilds: client.guilds.cache.size,
+          uptime: process.uptime(),
+          timestamp: new Date().toISOString()
+        }));
+      } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found');
+      }
+    });
+
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`🌐 Health check server running on port ${PORT}`);
+      console.log(`📡 Health endpoint: http://localhost:${PORT}/health`);
+    });
     
   } catch (error) {
     console.error("❌ Failed to start bot:", error.message);
