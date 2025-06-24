@@ -1,6 +1,19 @@
-const { execSync } = require("child_process");
-const fetch = require("node-fetch");
+
 const { Client, Routes, GatewayIntentBits } = require("discord.js");
+
+// Load environment variables
+require('dotenv').config();
+
+// Conditional imports for Replit-specific features
+let execSync, fetch;
+try {
+  if (process.env.REPLIT_DEPLOYMENT || process.env.REPL_ID) {
+    execSync = require("child_process").execSync;
+    fetch = require("node-fetch");
+  }
+} catch (err) {
+  console.log("⚠️ Some optional dependencies not available (this is normal on non-Replit platforms)");
+}
 
 const ping = {
   name: "ping",
@@ -36,7 +49,6 @@ const activedeveloper = {
 };
 
 const commands = [ping, serverinfo, userinfo, help, activedeveloper];
-// Join the Discord for support: https://discord.gg/M5MSE9CvNM
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
@@ -211,42 +223,55 @@ client.on("interactionCreate", (interaction) => {
   }
 });
 
-// Load environment variables
-require('dotenv').config();
-
 // Get bot token from environment variable
 const token = process.env.DISCORD_BOT_TOKEN;
 
 (async () => {
-  if (!token) throw new Error("Please set DISCORD_BOT_TOKEN in your .env file");
-
-  const ratelimitTest = await fetch(
-    `https://discord.com/api/v9/invites/discord-developers`,
-  );
-
-  if (!ratelimitTest.ok) {
-    await question(
-      `Uh oh, looks like the node you're on is currently being blocked by Discord. Press the "Enter" button on your keyboard to be reassigned to a new node. (you'll need to rerun the program once you reconnect)`,
-    );
-
-    // This kills the container manager on the repl forcing Replit to assign the repl to another node with another IP address (if the ip is globally rate limited)
-    //^ in short: Restarts the bot to be used again/attempted to start up again!
-    execSync("kill 1");
-    return;
+  if (!token) {
+    console.error("❌ Error: DISCORD_BOT_TOKEN environment variable is not set!");
+    console.log("Please set your Discord bot token in the environment variables.");
+    process.exit(1);
   }
 
-  await client.login(token).catch((err) => {
-    throw err;
-  });
+  console.log("🔄 Starting Discord bot...");
 
-  await client.rest.put(Routes.applicationCommands(client.user.id), {
-    body: commands,
-  });
-  console.log(
-    `✅ Registered ${commands.length} commands: ${commands.map((cmd) => cmd.name).join(", ")}`,
-  );
+  try {
+    // Test rate limiting only on Replit (skip on other platforms)
+    if (process.env.REPLIT_DEPLOYMENT || process.env.REPL_ID) {
+      console.log("📡 Testing Discord API connectivity...");
+      if (fetch) {
+        const ratelimitTest = await fetch(
+          `https://discord.com/api/v9/invites/discord-developers`,
+        );
 
-  console.log(
-    "DONE | Application/Bot is up and running. DO NOT CLOSE THIS TAB UNLESS YOU ARE FINISHED USING THE BOT, IT WILL PUT THE BOT OFFLINE.",
-  );
+        if (!ratelimitTest.ok) {
+          console.log("⚠️ Rate limit detected on this node. Restarting...");
+          if (execSync) {
+            execSync("kill 1");
+          }
+          return;
+        }
+      }
+    }
+
+    // Login to Discord
+    console.log("🔐 Logging in to Discord...");
+    await client.login(token);
+
+    // Register commands
+    console.log("📝 Registering slash commands...");
+    await client.rest.put(Routes.applicationCommands(client.user.id), {
+      body: commands,
+    });
+    
+    console.log(
+      `✅ Registered ${commands.length} commands: ${commands.map((cmd) => cmd.name).join(", ")}`,
+    );
+
+    console.log("🎉 Bot is now online and ready!");
+    
+  } catch (error) {
+    console.error("❌ Failed to start bot:", error.message);
+    process.exit(1);
+  }
 })();
