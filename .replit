@@ -1,0 +1,18 @@
+onBoot="npm install"
+run = "npm install && node --no-warnings ."
+modules = ["nodejs-20"]
+
+[nix]
+channel = "stable-21_11"
+
+[workflows]
+runButton = "Start Discord Bot"
+
+[[workflows.workflow]]
+name = "Start Discord Bot"
+author = 35037752
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node index.js"
