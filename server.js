@@ -2,22 +2,33 @@ const express = require('express');
 const { Client, GatewayIntentBits } = require('discord.js');
 const path = require('path');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
-// Initialize Discord bot
+// Initialize Discord bot with necessary intents
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
   ]
 });
 
 // Discord bot token from environment variable
 const TOKEN = process.env.DISCORD_TOKEN;
 
-// Bot event handlers
+// Bot ready event
 client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}!`);
+  console.log(`Discord Bot Logged in as ${client.user.tag}!`);
+});
+
+// Message handling
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+  
+  if (message.content === '!ping') {
+    await message.reply('Pong!');
+    console.log('Responded to ping command');
+  }
 });
 
 // Health check endpoint for Render
@@ -38,7 +49,7 @@ app.listen(PORT, () => {
 // Login to Discord with your client's token
 if (TOKEN) {
   client.login(TOKEN)
-    .then(() => console.log('Discord bot logged in successfully'))
+    .then(() => console.log('Discord bot login successful'))
     .catch(err => console.error('Discord login error:', err));
 } else {
   console.error('DISCORD_TOKEN not found in environment variables');
