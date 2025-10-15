@@ -8,14 +8,12 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Main route
+// Handle the root route
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.send('Active Developer Badge Service is Running');
 });
 
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
