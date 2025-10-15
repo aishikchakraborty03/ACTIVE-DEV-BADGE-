@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: active-dev-badge
+    env: node
+    buildCommand: yarn install
+    startCommand: yarn start
+    healthCheckPath: /health
